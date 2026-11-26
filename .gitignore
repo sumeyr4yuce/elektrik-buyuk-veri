@@ -1,0 +1,9 @@
+# Veri Git'e konmaz (10 GB). README'deki indirme adımıyla yeniden üretilir.
+data/
+spark-warehouse/
+metastore_db/
+derby.log
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
