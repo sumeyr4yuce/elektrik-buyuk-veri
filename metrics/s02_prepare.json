@@ -1,0 +1,10 @@
+{
+  "input": "/content/elektrik-buyuk-veri/data/raw/lcl_csv",
+  "t_read_transform_write_s": 184.218,
+  "t_meters_s": 14.245,
+  "rows": 8000000,
+  "meters": 242,
+  "raw_csv_bytes": 406777168,
+  "parquet_bytes": 23728667,
+  "compression_ratio": 17.14
+}

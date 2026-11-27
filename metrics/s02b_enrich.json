@@ -1,0 +1,13 @@
+{
+  "households_file": "/content/elektrik-buyuk-veri/data/raw/informations_households.csv",
+  "t_enrich_s": 64.29,
+  "meters": 242,
+  "meters_with_acorn": 242,
+  "rows": 8000000,
+  "acorn_grouped_counts": {
+    "ACORN-U": 1,
+    "Comfortable": 59,
+    "Affluent": 115,
+    "Adversity": 67
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "source_rows": 8000000,
+  "upscale": 1,
+  "subsets": {
+    "100k": {
+      "rows": 100000,
+      "meters": 4,
+      "t_write_csv_s": 3.812,
+      "csv_bytes": 9356808,
+      "t_write_parquet_s": 3.366,
+      "parquet_bytes": 521621,
+      "size_ratio_csv_over_parquet": 17.94
+    },
+    "1m": {
+      "rows": 1000000,
+      "meters": 32,
+      "t_write_csv_s": 4.789,
+      "csv_bytes": 94182626,
+      "t_write_parquet_s": 4.246,
+      "parquet_bytes": 4716652,
+      "size_ratio_csv_over_parquet": 19.97
+    },
+    "5m": {
+      "rows": 5000000,
+      "meters": 152,
+      "t_write_csv_s": 19.506,
+      "csv_bytes": 471160594,
+      "t_write_parquet_s": 14.477,
+      "parquet_bytes": 19915308,
+      "size_ratio_csv_over_parquet": 23.66
+    }
+  }
+}
