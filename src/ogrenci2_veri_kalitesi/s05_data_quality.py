@@ -506,8 +506,9 @@ def write_report(M, figs, path: Path, src: str):
 
 - {d['dup_keys']:,} (abone, zaman) anahtarı birden fazla kez geçiyor; bunlar {d['extra_rows']:,} fazla satır üretiyor.
 - Değerleri birbirinden farklı olan tekrar sayısı: **{d['conflicting_keys']}**. {"Yani tekrarların tamamı birebir kopya." if d['conflicting_keys'] == 0 else "Çelişen tekrarlarda ortalama alınıp `dup_conflict` bayrağı kondu."}
-- En sık görüldükleri saat: {', '.join(f'{k} ({v:,})' for k, v in d['top_times'].items())}. Kopyaların gece yarısında
-  yoğunlaşması, ham dosyalar birleştirilirken gün/ay sınırındaki satırın iki dosyada da yer aldığını düşündürüyor.
+- En sık görüldükleri saat: {', '.join(f'{k} ({v:,})' for k, v in d['top_times'].items())}.
+- Bu tekrarlar Öğrenci 1'in dosya birleştirme adımından kaynaklanmıyor: ham CSV'deki satır sayısı Parquet ile birebir aynı
+  ve dosya birleşme noktaları en fazla birkaç tekrar üretebilir. Yani tekrarlar **kaynak veride (LCL) mevcut; sebebi bilinmiyor.**
 
 **Karar:** Kopyalardan biri tutulur. Bu adım yapılmazsa Öğrenci 3'ün `sum` aggregation'ları ilgili günleri şişirir.
 
@@ -616,6 +617,11 @@ daily = df.groupBy("meter_id", "date").agg(F.sum("kwh_clean"))   # Öğrenci 3
         md += "\n### Ölçeklenebilirlik (aynı pipeline, iç içe alt kümeler)\n\n| Alt küme | Satır | Abone | Süre (sn) | Satır/sn |\n|---|---|---|---|---|\n"
         for k, b in M["benchmark"].items():
             md += f"| {k} | {b['rows']:,} | {b['meters']} | {b['seconds']} | {b['rows_per_s']:,.0f} |\n"
+        md += ("\n**Küçük veride saniyede işlenen satır neden daha az?** Spark her işte veri boyutundan bağımsız sabit bir "
+               "başlangıç maliyeti öder: sorgu planını oluşturma, işi görevlere bölme, görevleri çekirdeklere dağıtma ve "
+               "sonuçları toplama. Küçük veride bu sabit maliyet toplam sürenin büyük kısmını oluşturur; veri büyüdükçe "
+               "gerçek hesaplamanın payı artar ve sabit maliyet daha çok satıra bölünür. Bu yüzden Spark'ın avantajı "
+               "büyük veride ortaya çıkar; çok küçük veri için pandas gibi tek makinelik araçlar daha hızlı olabilir.\n")
     path.write_text(md, encoding="utf-8")
 
 
