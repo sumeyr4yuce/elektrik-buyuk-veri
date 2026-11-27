@@ -1,0 +1,152 @@
+{
+  "input": "data/processed/readings.parquet",
+  "nulls": {
+    "rows": 8000000,
+    "meters": 242,
+    "null_kwh": 238,
+    "off_grid": 238,
+    "off_grid_and_null": 238,
+    "off_grid_with_value": 0,
+    "on_grid_null": 0,
+    "null_events_top": [
+      {
+        "hour": "2012-12-18 15:00:00",
+        "meters": 227,
+        "rows": 227
+      },
+      {
+        "hour": "2012-12-19 12:00:00",
+        "meters": 11,
+        "rows": 11
+      }
+    ],
+    "null_share_in_top5_hours": 1.0
+  },
+  "duplicates": {
+    "dup_keys": 5491,
+    "extra_rows": 5491,
+    "conflicting_keys": 0,
+    "top_times": {
+      "00:00": 5491
+    }
+  },
+  "physical": {
+    "negative": 0,
+    "above_capacity": 0,
+    "max_physical_kwh": 11.5
+  },
+  "gaps": {
+    "grid_slots": 8001324,
+    "missing_slots": 7053,
+    "n_gaps": 1039,
+    "by_class": {
+      "orta (1 saat-1 gun)": {
+        "gaps": 170,
+        "slots": 4723
+      },
+      "uzun (>1 gun)": {
+        "gaps": 13,
+        "slots": 1440
+      },
+      "kisa (<=1 saat)": {
+        "gaps": 856,
+        "slots": 890
+      }
+    },
+    "gap_len_quantiles_slots": {
+      "p50": 1.0,
+      "p90": 16.0,
+      "p99": 96.0
+    },
+    "max_gap_slots": 192
+  },
+  "outliers": {
+    "observed": 7994271,
+    "out_global": 215583,
+    "out_context": 215980,
+    "out_both": 80583,
+    "out_3sigma": 167899,
+    "zero_run_slots": 64182,
+    "flat_run_slots": 3059,
+    "zeros_total": 150588,
+    "iqr_log1p": {
+      "q1": 0.05638033343610764,
+      "q3": 0.22154226994723591,
+      "k": 3.0
+    },
+    "global_upper_kwh": 1.0483,
+    "mean_plus_3sigma_kwh": 1.1695,
+    "robust_z": 5.0,
+    "context_outlier_top_hours": {
+      "12": 14438,
+      "11": 14313,
+      "13": 13783,
+      "10": 13232,
+      "14": 12562
+    },
+    "mean_consumption_peak_hour": 19,
+    "context_rate_around_peak": 0.02634,
+    "meters_with_zero_run": 12
+  },
+  "example_meter": "MAC004353",
+  "benchmark": {
+    "100k": {
+      "rows": 100000,
+      "meters": 4,
+      "seconds": 12.54,
+      "rows_per_s": 7974.481658692185,
+      "steps": {
+        "1_nulls": 0.681,
+        "2_duplicates": 0.972,
+        "3_physical": 1.416,
+        "4_gaps_impute": 3.068,
+        "5_outliers": 5.721
+      }
+    },
+    "1m": {
+      "rows": 1000000,
+      "meters": 32,
+      "seconds": 32.0,
+      "rows_per_s": 31250.0,
+      "steps": {
+        "1_nulls": 1.081,
+        "2_duplicates": 3.905,
+        "3_physical": 4.649,
+        "4_gaps_impute": 7.177,
+        "5_outliers": 14.506
+      }
+    },
+    "5m": {
+      "rows": 5000000,
+      "meters": 152,
+      "seconds": 90.37,
+      "rows_per_s": 55328.09560694921,
+      "steps": {
+        "1_nulls": 1.855,
+        "2_duplicates": 14.201,
+        "3_physical": 14.504,
+        "4_gaps_impute": 18.558,
+        "5_outliers": 40.418
+      }
+    }
+  },
+  "timings": {
+    "1_nulls": 6.456,
+    "2_duplicates": 24.355,
+    "3_physical": 26.879,
+    "4_gaps_impute": 34.532,
+    "5_outliers": 73.126,
+    "6_write_clean": 22.576,
+    "7_figures": 12.777
+  },
+  "thresholds": {
+    "MAD_FLOOR": 0.05,
+    "SHORT_GAP_MAX": 2,
+    "MEDIUM_GAP_MAX": 48,
+    "MAX_PHYSICAL_KWH": 11.5,
+    "IQR_K": 3.0,
+    "ROBUST_Z": 5.0,
+    "ZERO_RUN_MIN": 48,
+    "FLAT_RUN_MIN": 12
+  }
+}
