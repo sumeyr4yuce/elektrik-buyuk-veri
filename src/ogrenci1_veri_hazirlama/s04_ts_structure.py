@@ -129,16 +129,28 @@ def profiles(df):
     fig.savefig(fig_path("gun_ici_profil")); plt.close(fig)
     wd = prof[False]
     peak_slot = int(wd.idxmax())
-    morning = slice(10, 25)                    # 05:00–12:00 arası sabah piki
-    m_wd, m_we = int(wd.loc[morning].idxmax()), int(prof[True].loc[morning].idxmax())
+    def ramp_slot(series):
+        """Sabah yükselişi: 04:00'ten sonra yükün, gece dibi ile 09:00-12:00 ortalaması arasındaki
+        mesafenin %90'ına ilk ulaştığı dilim. (Tepe noktası aramak yanıltıcı: hafta içi belirgin bir
+        sabah piki yok, yük yükselip öğlene kadar düz gidiyor.)"""
+        night = series.loc[0:12].min()
+        plateau = series.loc[18:23].mean()
+        target = night + 0.9 * (plateau - night)
+        after = series.loc[8:30]
+        hit = after[after >= target]
+        return int(hit.index[0]) if len(hit) else None
+    m_wd, m_we = ramp_slot(wd), ramp_slot(prof[True])
+    fmt = lambda sl: None if sl is None else f"{sl // 2:02d}:{30 * (sl % 2):02d}"  # noqa: E731
     res = {"weekday_peak_time": f"{peak_slot // 2:02d}:{30 * (peak_slot % 2):02d}",
            "weekday_peak_kwh": round(float(wd.max()), 4),
            "weekday_min_time": f"{int(wd.idxmin()) // 2:02d}:{30 * (int(wd.idxmin()) % 2):02d}",
            "peak_to_trough_ratio": round(float(wd.max() / wd.min()), 2),
            "weekend_over_weekday_daily": round(float(prof[True].sum() / prof[False].sum()), 3),
-           "morning_peak_weekday": f"{m_wd // 2:02d}:{30 * (m_wd % 2):02d}",
-           "morning_peak_weekend": f"{m_we // 2:02d}:{30 * (m_we % 2):02d}",
-           "morning_peak_shift_h": (m_we - m_wd) / 2}
+           "morning_ramp_weekday": fmt(m_wd),
+           "morning_ramp_weekend": fmt(m_we),
+           "morning_ramp_shift_h": (m_we - m_wd) / 2 if None not in (m_wd, m_we) else None,
+           "weekend_peak_time": fmt(int(prof[True].idxmax())),
+           "midday_weekend_over_weekday": round(float(prof[True].loc[20:31].mean() / wd.loc[20:31].mean()), 3)}
 
     # Gün × saat ısı haritası
     hm = (v.groupBy("dow", "hour").agg(F.avg("kwh").alias("m")).toPandas()
@@ -248,11 +260,20 @@ def group_profiles(df):
         sizes = (df.groupBy(col).agg(F.countDistinct("meter_id").alias("n")).toPandas()
                    .set_index(col)["n"].to_dict())
         order = sorted(p.columns, key=lambda c: -sizes.get(c, 0))
-        for i, c in enumerate(order):
+        small = [c for c in order if sizes.get(c, 0) < 10]       # tek tük hane grup ortalaması değildir
+        for i, c in enumerate([c for c in order if c not in small]):
             ax.plot(np.arange(48) / 2, p[c], color=SERIES[i % len(SERIES)],
                     label=f"{c} (n={sizes.get(c, 0)})")
         ax.set(title=f"Hafta içi profil — {title}", xlabel="Saat", xticks=range(0, 25, 3), xlim=(0, 23.5))
         ax.legend(fontsize=8)
+        notes = []
+        if small:
+            notes.append("Grafikte yok (< 10 abone): " + ", ".join(f"{c} (n={sizes[c]})" for c in small))
+        if len(order) == 1:
+            notes.append(f"Örneklemde yalnızca '{order[0]}' var; karşılaştırma yapılamaz")
+        if notes:
+            ax.text(0.0, -0.22, "\n".join(notes), transform=ax.transAxes, fontsize=8, color=INK2, va="top")
+        res[f"{col}_hidden_small_groups"] = small
         res[col] = {str(c): {"meters": int(sizes.get(c, 0)),
                              "mean_kwh_hh": round(float(p[c].mean()), 4)} for c in order}
         # şekil benzerliği: günlük toplamına normalize edilmiş profiller arası en düşük korelasyon
@@ -312,12 +333,21 @@ def write_report(m, label):
         else:
             s += (f"Normalize profiller arası en düşük korelasyon r = {c}: gruplar *şekil* olarak da "
                   "ayrışıyor; profil sınıflandırması (Öğrenci 4) için ACORN grubu anlamlı bir etiket olabilir.")
+        if m["groups"].get("acorn_grouped_hidden_small_groups"):
+            s += (" Grafikte 10'dan az abonesi olan gruplar ("
+                  + ", ".join(m["groups"]["acorn_grouped_hidden_small_groups"])
+                  + ") gösterilmedi; tek bir hanenin profili grup ortalaması gibi okunmamalı.")
+        tariffs = list(m["groups"].get("tariff", {}))
+        if len(tariffs) == 1:
+            s += (f"\n\n**Tarife:** Bu örneklemdeki abonelerin tamamı **{tariffs[0]}** tarifesinde; dinamik (ToU) tarifeli "
+                  "abone yok. Tarife karşılaştırması bu örneklemle yapılamaz. Gerekirse ToU aboneleri içeren LCL "
+                  "parçaları da indirilmeli (tam veride ~1.100 ToU abonesi var).")
         return s
 
     md = f"""# Öğrenci 1 — Veri Hazırlama ve Zaman Serisi Yapısı: Bulgular
 
 > Otomatik üretildi: {datetime.now():%Y-%m-%d %H:%M} · Girdi: **{label}**
-> Bu dosyadaki sayılar `s04_ts_structure.py` tarafından doldurulur. Gerçek LCL verisiyle yeniden çalıştırın.
+> Bu dosyadaki sayılar `s04_ts_structure.py` tarafından doldurulur.
 
 ## 1. Veri kümesine genel bakış
 
@@ -364,8 +394,12 @@ kullanılmalı; aksi halde "talep arttı" sonucu yalnızca abone sayısının ar
 
 - Hafta içi pik zamanı **{pr['weekday_peak_time']}** ({pr['weekday_peak_kwh']} kWh/yarım saat), en düşük yük {pr['weekday_min_time']}.
   Pik/dip oranı **{pr['peak_to_trough_ratio']}×**.
-- Hafta sonu günlük tüketimi hafta içinin {pr['weekend_over_weekday_daily']} katı. Sabah piki hafta içi {pr['morning_peak_weekday']},
-  hafta sonu {pr['morning_peak_weekend']} ({pr['morning_peak_shift_h']:+.1f} saat kayma).
+- Hafta sonu günlük tüketimi hafta içinin {pr['weekend_over_weekday_daily']} katı.
+- Sabah yükselişi (yükün gece dibinden gündüz seviyesine %90 ulaştığı an) hafta içi **{pr['morning_ramp_weekday']}**,
+  hafta sonu **{pr['morning_ramp_weekend']}**{f" ({pr['morning_ramp_shift_h']:+.1f} saat)" if pr['morning_ramp_shift_h'] is not None else ""}.
+  {"Hafta sonu sabah yükü daha geç başlıyor (geç kalkma). " if (pr['morning_ramp_shift_h'] or 0) >= 0.5 else ""}Gün ortası (10:00–16:00) yükü hafta sonu hafta içinin
+  {pr['midday_weekend_over_weekday']} katı{" (evde geçirilen zaman)" if pr['midday_weekend_over_weekday'] > 1.05 else ""}.
+  Akşam piki hafta içi {pr['weekday_peak_time']}, hafta sonu {pr['weekend_peak_time']}: pik talebi belirleyen davranış iki gün tipinde de akşam.
 - Hane başı ortalama günlük tüketim {pr['daily_kwh_mean']} kWh. Kış (Ara–Şub) / yaz (Haz–Ağu) oranı: **{pr['winter_summer_ratio']}**.
 - {yorum_acf()}
 
