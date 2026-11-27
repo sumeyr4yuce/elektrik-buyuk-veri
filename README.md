@@ -20,6 +20,11 @@ LCLid,stdorToU,DateTime,KWH/hh (per half hour) ,Acorn,Acorn_grouped
 MAC000002,Std,2012-10-12 00:30:00.0000000, 0 ,ACORN-A,Affluent
 ```
 
+**ACORN notu:** London Datastore'un güncel dosyalarında yalnızca 4 kolon var (LCLid, stdorToU, DateTime, kWh).
+Acorn / Acorn_grouped bilgisi aynı verinin Kaggle kopyasındaki hane tablosundan alınır
+(https://www.kaggle.com/datasets/jeanmidev/smart-meters-in-london → `informations_households.csv`) ve
+`s02b_enrich_households.py` ile `meter_id` üzerinden eklenir.
+
 Veri 167M satırla ödevdeki 5M sınırının çok üstündedir; deneyler için **gerçek verinin iç içe alt kümeleri**
 kullanılır. Sentetik ölçekleme (`--upscale`) yalnızca 167M'nin üstündeki sunucu deneyleri ve internetsiz test içindir.
 
@@ -31,12 +36,23 @@ flowchart LR
     B -->|s02_prepare<br/>PySpark: şema, tip, türetilmiş kolon| C[(data/processed/<br/>readings.parquet<br/>year/month bölümlü)]
     C --> M[(meters.parquet<br/>abone meta)]
     C -->|s03_make_subsets<br/>abone bazlı, iç içe| D[(data/subsets<br/>100k · 1m · 5m<br/>CSV + Parquet)]
+    K[Kaggle hane tablosu<br/>informations_households.csv] -->|s02b_enrich_households<br/>ACORN join| C
     C -->|s04_ts_structure| R[docs/ogrenci1_bulgular.md<br/>figures · metrics]
-    D --> S2[Öğrenci 2<br/>Veri kalitesi]
-    D --> S3[Öğrenci 3<br/>Spark aggregation]
-    D --> S4[Öğrenci 4<br/>Tahmin / profil]
-    D --> S5[Öğrenci 5<br/>Pik talep · benchmark · dashboard]
+    C -->|s05_data_quality<br/>Öğrenci 2| Q[(Drive: ogrenci2_cikti/clean/<br/>readings_clean.parquet<br/>doldurulmuş + bayraklı)]
+    D -->|hız ölçümleri| S3[Öğrenci 3<br/>Spark aggregation]
+    D -->|hız ölçümleri| S5[Öğrenci 5<br/>Pik talep · benchmark · dashboard]
+    Q -->|analiz sonuçları| S3
+    Q -->|analiz sonuçları| S4[Öğrenci 4<br/>Tahmin / profil]
+    Q -->|analiz sonuçları| S5
 ```
+
+### Hangi veriyi ne için kullanmalı?
+
+| Amaç | Veri | Neden |
+|---|---|---|
+| **Analiz sonuçları** (aggregation değerleri, model eğitimi, pik analizi) | Öğrenci 2'nin `readings_clean.parquet` dosyası, `use_for_model = true` filtresiyle | Tekrarlar temizlenmiş, eksikler doldurulmuş, şüpheli diziler işaretli. Ham veride 5.491 tekrar eden gece yarısı satırı `sum` sonuçlarını şişirir. |
+| **Hız / ölçeklenebilirlik ölçümleri** (100K / 1M / 5M, CSV vs Parquet) | Öğrenci 1'in `data/subsets/<boyut>/<format>` kümeleri | Temiz veri sadece tam küme için var. Hız ölçümünde amaç boyuta göre süreyi görmek; tekrarlar (%0,07) süreyi anlamlı etkilemez. |
+| Analizden tamamen çıkarılacak abone | `MAC000037` | Okumalarının %97'si kesintisiz sıfır (Öğrenci 2, §6). |
 
 ## Klasör yapısı
 
@@ -46,9 +62,12 @@ src/ogrenci1_veri_hazirlama/
   s00_make_synthetic_raw.py LCL formatında sentetik test verisi
   s01_download.py           LCL indirme + açma
   s02_prepare.py            ham CSV -> canonical Parquet (PySpark)
+  s02b_enrich_households.py ACORN bilgisini Kaggle hane tablosundan ekler
   s03_make_subsets.py       100K / 1M / 5M alt kümeleri, CSV + Parquet, sentetik ölçekleme
   s04_ts_structure.py       zaman serisi yapısı analizi, grafikler, otomatik rapor
-notebooks/                  Colab notebook'ları
+src/ogrenci2_veri_kalitesi/
+  s05_data_quality.py       eksik ölçüm, tekrar, uç değer analizi; temiz + bayraklı veri üretir
+notebooks/                  Colab notebook'ları (ogrenciN_colab.ipynb)
 docs/                       raporlar ve figürler
 metrics/                    JSON ölçümler (süre, boyut, istatistik)
 ```
@@ -79,7 +98,10 @@ df = spark.read.parquet(str(subset_path("1m", "parquet")))   # "100k" | "1m" | "
 df.printSchema(); df.show(5)
 ```
 
-Kolonların anlamı aşağıdaki "Ortak veri sözleşmesi" tablosunda. Kendi kodunuzu `src/ogrenciN_<konu>/` klasörüne koyun,
+Kolonların anlamı aşağıdaki "Ortak veri sözleşmesi" tablosunda. Temiz veri için Drive'daki `ogrenci2_cikti`
+klasörüne de kısayol ekleyin; ek kolonlar (`kwh_clean`, `use_for_model`, bayraklar) `docs/ogrenci2_bulgular.md` §7'de.
+
+Kendi kodunuzu `src/ogrenciN_<konu>/` klasörüne koyun,
 ölçümlerinizi `metrics/`, grafiklerinizi `docs/figures/` altına yazın.
 
 **Önemli:** Drive'daki veriyi silmeyin veya üzerine yazmayın. Kendi çıktılarınızı farklı bir klasöre kaydedin.
@@ -139,7 +161,7 @@ df = spark.read.parquet(str(subset_path("1m", "parquet")))
 | Öğrenci | Konu | Kod | Çıktı |
 |---|---|---|---|
 | 1 | Smart-meter verisini hazırlama, zaman serisi yapısı | `src/ogrenci1_veri_hazirlama/` | canonical Parquet, 100K/1M/5M kümeleri, `docs/ogrenci1_bulgular.md` |
-| 2 | Eksik ölçüm, uç değer, veri kalitesi | `src/ogrenci2_.../` | |
+| 2 | Eksik ölçüm, uç değer, veri kalitesi | `src/ogrenci2_veri_kalitesi/` | `readings_clean.parquet` (Drive: `ogrenci2_cikti`), `docs/ogrenci2_bulgular.md` |
 | 3 | Spark ile saatlik/günlük/haftalık/abone aggregation | `src/ogrenci3_.../` | |
 | 4 | Tüketim tahmini / kullanıcı profili sınıflandırma | `src/ogrenci4_.../` | |
 | 5 | Pik talep, performans karşılaştırması, dashboard | `src/ogrenci5_.../` | |
