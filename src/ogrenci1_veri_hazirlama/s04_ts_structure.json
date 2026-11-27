@@ -1,0 +1,121 @@
+{
+  "input": "/content/elektrik-buyuk-veri/data/processed/readings.parquet",
+  "overview": {
+    "rows": 8000000,
+    "meters": 242,
+    "ts_min": "2011-12-06 13:00:00",
+    "ts_max": "2014-02-28 00:00:00",
+    "null_kwh": 238,
+    "duplicate_rows_meter_ts": 5491,
+    "null_kwh_pct": 0.003
+  },
+  "intervals": {
+    "interval_buckets": {
+      "> 1 gün boşluk": 99,
+      "ızgara dışı": 476,
+      "1-2 saat boşluk": 868,
+      "0 (tekrar)": 5491,
+      "2-24 saat boşluk": 72,
+      "30 dk (düzenli)": 7992752
+    },
+    "n_gaps": 1039,
+    "max_gap_min": 5790.0,
+    "median_gap_min": 60.0,
+    "missing_slots_in_gaps": 7053.0,
+    "off_grid_timestamps": 238
+  },
+  "coverage": {
+    "coverage_quantiles": {
+      "0.01": 0.9949,
+      "0.05": 0.9974,
+      "0.25": 0.9993,
+      "0.5": 1.0
+    },
+    "coverage_mean": 0.9994,
+    "meters_cov_lt_90": 0,
+    "meters_cov_ge_99": 241,
+    "days_active_median": 712.6
+  },
+  "active": {
+    "active_max": 239,
+    "active_median": 231,
+    "stable_panel_from": "2012-05-24",
+    "stable_panel_to": "2014-02-28"
+  },
+  "profiles": {
+    "weekday_peak_time": "19:30",
+    "weekday_peak_kwh": 0.3276,
+    "weekday_min_time": "04:00",
+    "peak_to_trough_ratio": 2.78,
+    "weekend_over_weekday_daily": 1.034,
+    "morning_peak_weekday": "12:30",
+    "morning_peak_weekend": "12:30",
+    "morning_peak_shift_h": 0.0,
+    "daily_kwh_mean": 10.518,
+    "winter_summer_ratio": 1.502
+  },
+  "acf": {
+    "acf_lag1": 0.966,
+    "acf_lag24h": 0.95,
+    "acf_lag12h": -0.053,
+    "acf_lag1w": 0.926,
+    "acf_series_points": 34311
+  },
+  "distribution": {
+    "n": 7999762.0,
+    "mean": 0.21905,
+    "std": 0.31689,
+    "skew": 4.90599,
+    "kurt": 41.20953,
+    "min": 0.0,
+    "max": 7.292,
+    "zero_share": 0.01884,
+    "neg_share": 0.0,
+    "p01": 0.0,
+    "p25": 0.058,
+    "p50": 0.12,
+    "p75": 0.247,
+    "p99": 1.553,
+    "p999": 3.263
+  },
+  "groups": {
+    "acorn_grouped": {
+      "Affluent": {
+        "meters": 115,
+        "mean_kwh_hh": 0.2543
+      },
+      "Adversity": {
+        "meters": 67,
+        "mean_kwh_hh": 0.1721
+      },
+      "Comfortable": {
+        "meters": 59,
+        "mean_kwh_hh": 0.1924
+      },
+      "ACORN-U": {
+        "meters": 1,
+        "mean_kwh_hh": 0.303
+      }
+    },
+    "acorn_grouped_min_shape_corr": 0.969,
+    "acorn_grouped_level_ratio_max_min": 1.48,
+    "tariff": {
+      "Std": {
+        "meters": 242,
+        "mean_kwh_hh": 0.2169
+      }
+    },
+    "tariff_min_shape_corr": 1.0,
+    "tariff_level_ratio_max_min": 1.0
+  },
+  "timings": {
+    "overview": 59.095,
+    "intervals": 26.488,
+    "coverage": 19.597,
+    "active": 7.31,
+    "profiles": 16.413,
+    "acf": 3.285,
+    "distribution": 54.111,
+    "groups": 11.203
+  }
+}
