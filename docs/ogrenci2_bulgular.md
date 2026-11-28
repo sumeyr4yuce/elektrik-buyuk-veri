@@ -1,6 +1,6 @@
 # Öğrenci 2 — Eksik Ölçümler, Uç Değerler ve Veri Kalitesi: Bulgular
 
-> Otomatik üretildi: 2026-11-27 01:07 · Girdi: `data/processed/readings.parquet`
+> Otomatik üretildi: 2026-11-27 00:16 · Girdi: `data/processed/readings.parquet`
 > Bu dosyadaki sayılar `s05_data_quality.py` tarafından doldurulur.
 
 ## Özet
@@ -21,7 +21,7 @@
 
 - Toplam 8,000,000 satırda 238 NULL kWh var. Bunların 238 tanesi aynı zamanda
   yarım saat ızgarasına oturmayan zaman damgası taşıyor; ızgara üzerinde olup NULL olan satır: 0.
-- NULL'ların %100.0'i en yoğun 2 saatlik pencerede toplanıyor. Aynı anda çok sayıda sayacı
+- NULL'ların %100.0'i yalnızca 5 saatlik pencerede toplanıyor. Aynı anda çok sayıda sayacı
   etkilediği için bu bir hane davranışı değil, **veri toplama sistemi kaynaklı bir olay**:
 
 | Saat | Etkilenen abone | NULL satır |
@@ -86,7 +86,7 @@ olduğu için genel sonuçları etkilemez, ama pik analizi yapılırken `is_impu
 
 Bağlamsal uç değerlerin en sık görüldüğü saatler (UTC): 12:00 (14438), 11:00 (14313), 13:00 (13783), 10:00 (13232), 14:00 (12562). Ortalama tüketimin piki ise saat
 **19:00**; pik çevresinde (±1 saat) bağlamsal uç değer oranı %2.63.
-Yani uç değerler pik çevresinde genel ortalamadan (%2.70) daha sık değil. Akşam piki hanelerin her gün tekrarlanan *düzenli* davranışı olduğu için abonenin kendi medyanı zaten yüksek ve bağlamsal yöntem onu uç değer saymıyor. Gündüz saatlerinde ise medyan düşük olduğundan çamaşır makinesi, fırın, su ısıtıcı gibi kısa süreli yükler olağandışı görünüyor. Pik tahmini açısından bu iyi haber: akşam piki gürültü değil, öğrenilebilir bir örüntü.
+Yani uç değerler pik saatinde yoğunlaşmıyor. Akşam piki hanelerin her gün tekrarlanan *düzenli* davranışı olduğu için abonenin kendi medyanı zaten yüksek ve bağlamsal yöntem onu uç değer saymıyor. Gündüz saatlerinde ise medyan düşük olduğundan çamaşır makinesi, fırın, su ısıtıcı gibi kısa süreli yükler olağandışı görünüyor. Pik tahmini açısından bu iyi haber: akşam piki gürültü değil, öğrenilebilir bir örüntü.
 
 **Karar: uç değerler silinmez.** Projenin araştırma sorusu pik talebi tahmin etmek. Yüksek okumaları silmek,
 tam olarak tahmin etmeye çalıştığımız olayı veriden çıkarmak olur. Bunun yerine `out_global` / `out_context` bayrakları
@@ -132,7 +132,7 @@ En düşük kaliteli 5 abone:
 | impute_method | linear / profile / none_long_gap / NULL |
 | out_global, out_context | uç değer bayrakları |
 | zero_run, flat_run | şüpheli dizi bayrakları |
-| quality_flag | tüm bayrakların dikey çizgiyle birleşimi (ör. `imputed_linear\|out_context`), temizse `ok` |
+| quality_flag | tüm bayrakların `|` ile birleşimi, temizse `ok` |
 | use_for_model | **önerilen filtre**: `kwh_clean` dolu ve şüpheli dizi değil |
 
 ```python
@@ -145,18 +145,18 @@ daily = df.groupBy("meter_id", "date").agg(F.sum("kwh_clean"))   # Öğrenci 3
 
 | Adım | Süre (sn) |
 |---|---|
-| 1_nulls | 6.456 |
-| 2_duplicates | 24.355 |
-| 3_physical | 26.879 |
-| 4_gaps_impute | 34.532 |
-| 5_outliers | 73.126 |
-| 6_write_clean | 22.576 |
-| 7_figures | 12.777 |
+| 1_nulls | 5.177 |
+| 2_duplicates | 22.589 |
+| 3_physical | 25.882 |
+| 4_gaps_impute | 33.364 |
+| 5_outliers | 65.775 |
+| 6_write_clean | 20.015 |
+| 7_figures | 11.324 |
 
 ### Ölçeklenebilirlik (aynı pipeline, iç içe alt kümeler)
 
 | Alt küme | Satır | Abone | Süre (sn) | Satır/sn |
 |---|---|---|---|---|
-| 100k | 100,000 | 4 | 12.54 | 7,974 |
-| 1m | 1,000,000 | 32 | 32.0 | 31,250 |
-| 5m | 5,000,000 | 152 | 90.37 | 55,328 |
+| 100k | 100,000 | 4 | 10.48 | 9,542 |
+| 1m | 1,000,000 | 32 | 29.2 | 34,247 |
+| 5m | 5,000,000 | 152 | 86.32 | 57,924 |
